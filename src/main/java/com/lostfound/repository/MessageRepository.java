@@ -48,7 +48,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
     /** Delete all messages referencing any of the given item IDs. */
     @Modifying
-    @Query(value = "DELETE FROM messages WHERE item_id IN :itemIds",
-           nativeQuery = true)
+    @Query("DELETE FROM Message m WHERE m.item.id IN :itemIds")
     void hardDeleteByItemIds(@Param("itemIds") List<Long> itemIds);
 }
