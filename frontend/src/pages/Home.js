@@ -23,7 +23,7 @@ const Home = () => {
       .finally(() => setLoading(false));
  
     // Fetch accurate stats from dedicated public endpoint
-    axios.get('http://localhost:8081/api/stats')
+    axios.get('http://localhost:8080/api/stats')
       .then(res => setStats({
         totalItems:    res.data.totalItems    || 0,
         lostItems:     res.data.lostItems     || 0,

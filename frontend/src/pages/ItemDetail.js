@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { itemService } from '../services/itemService';
 import './ItemDetail.css';
  
-const API = 'http://localhost:8081/api';
+const API = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
  
 const getHeaders = () => ({
   'Content-Type': 'application/json',
@@ -41,7 +41,7 @@ const ItemDetail = () => {
   const getImageUrl = (url) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
-    return `http://localhost:8081${url}`;
+    return `http://localhost:8080${url}`;
   };
  
   const formatDate = (d) => {
