@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { itemService } from '../services/itemService';
 import './Dashboard.css';
  
-const API = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+const API = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 const getHeaders = () => ({
   'Content-Type': 'application/json',
   Authorization: `Bearer ${localStorage.getItem('token')}`,

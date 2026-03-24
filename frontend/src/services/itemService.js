@@ -1,22 +1,32 @@
 import api from './api';
 
 export const itemService = {
-  getAll:    (params) => api.get('/items', { params }),
-  search:    (params) => api.get('/items/search', { params }),
-  getById:   (id)     => api.get(`/items/${id}`),
-  getMyItems: ()      => api.get('/items/my'),
+	// GET ALL
+	getAll: (params) => api.get('/api/items', { params }),
 
-  // Plain JSON create (old, kept for compatibility)
-  create: (data) => api.post('/items', data),
+	// SEARCH
+	search: (params) => api.get('/api/items/search', { params }),
 
-  // Multipart FormData create — used by ReportLost / ReportFound
-  createWithFormData: (formData) =>
-    api.post('/items', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+	// GET BY ID
+	getById: (id) => api.get(`/api/items/${id}`),
 
-  update: (id, data) => api.put(`/items/${id}`, data),
-  delete: (id)       => api.delete(`/items/${id}`),
+	// MY ITEMS
+	getMyItems: () => api.get('/api/items/my'),
+
+	// CREATE
+	create: (data) => api.post('/api/items', data),
+
+	// CREATE WITH FILE
+	createWithFormData: (formData) =>
+	  api.post('/api/items', formData, {
+	    headers: { 'Content-Type': 'multipart/form-data' },
+	  }),
+
+	// UPDATE
+	update: (id, data) => api.put(`/api/items/${id}`, data),
+
+	// DELETE
+	delete: (id) => api.delete(`/api/items/${id}`),
 };
 
 export const messageService = {

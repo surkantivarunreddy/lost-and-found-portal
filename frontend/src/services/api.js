@@ -1,20 +1,20 @@
 import axios from 'axios';
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL
-    ? `${process.env.REACT_APP_API_URL}/api`
-    : 'http://localhost:8080/api',
+  baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach JWT token to every request automatically
+// Attach JWT token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Handle 401 globally (token expired)
+// Handle 401
 api.interceptors.response.use(
   (response) => response,
   (error) => {
