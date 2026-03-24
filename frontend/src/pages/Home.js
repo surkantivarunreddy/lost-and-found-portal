@@ -21,7 +21,7 @@ const Home = () => {
       .catch(console.error)
       .finally(() => setLoading(false));
 
-    api.get('/api/stats')
+    api.get('/stats')
       .then(res => setStats({
         totalItems:    res.data.totalItems    || 0,
         lostItems:     res.data.lostItems     || 0,

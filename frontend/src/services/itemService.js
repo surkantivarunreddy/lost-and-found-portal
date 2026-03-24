@@ -2,19 +2,19 @@ import api from './api';
 
 export const itemService = {
 	// GET ALL
-	getAll: (params) => api.get('/api/items', { params }),
+	getAll: (params) => api.get('/items', { params }),
 
 	// SEARCH
-	search: (params) => api.get('/api/items/search', { params }),
+	search: (params) => api.get('/items/search', { params }),
 
 	// GET BY ID
-	getById: (id) => api.get(`/api/items/${id}`),
+	getById: (id) => api.get(`/items/${id}`),
 
 	// MY ITEMS
-	getMyItems: () => api.get('/api/items/my'),
+	getMyItems: () => api.get('/items/my'),
 
 	// CREATE
-	create: (data) => api.post('/api/items', data),
+	create: (data) => api.post('/items', data),
 
 	// CREATE WITH FILE
 	createWithFormData: (formData) =>
