@@ -1,5 +1,5 @@
 package com.lostfound.config;
- 
+
 import com.lostfound.service.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -20,26 +20,27 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
- 
+
+import java.util.Arrays;
 import java.util.List;
- 
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
- 
-    private final JwtAuthFilter         jwtAuthFilter;
+
+    private final JwtAuthFilter          jwtAuthFilter;
     private final UserDetailsServiceImpl userDetailsService;
- 
-    @Value("${app.cors.allowed-origins}")
+
+    @Value("${app.cors.allowed-origins:*}")
     private String allowedOrigins;
- 
+
     public SecurityConfig(JwtAuthFilter jwtAuthFilter,
                           UserDetailsServiceImpl userDetailsService) {
         this.jwtAuthFilter      = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
     }
- 
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -50,7 +51,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/items/search").permitAll()
                 .requestMatchers("/api/items/{id}").permitAll()
                 .requestMatchers("/api/items").permitAll()
-                .requestMatchers("/api/stats").permitAll()      // ← public stats
+                .requestMatchers("/api/stats").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
@@ -59,22 +60,34 @@ public class SecurityConfig {
                 s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
- 
+
         return http.build();
     }
- 
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+
+        String origins = allowedOrigins.trim();
+        if ("*".equals(origins)) {
+            // Allow all origins (use pattern to also allow credentials)
+            config.setAllowedOriginPatterns(List.of("*"));
+            config.setAllowCredentials(true);
+        } else {
+            // Allow specific origins from comma-separated list
+            config.setAllowedOrigins(Arrays.asList(origins.split(",")));
+            config.setAllowCredentials(true);
+        }
+
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS","PATCH"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+        config.setExposedHeaders(List.of("Authorization"));
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
     }
- 
+
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
@@ -82,13 +95,13 @@ public class SecurityConfig {
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
- 
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
             throws Exception {
         return config.getAuthenticationManager();
     }
- 
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
