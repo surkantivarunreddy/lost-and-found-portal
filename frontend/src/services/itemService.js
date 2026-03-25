@@ -30,10 +30,10 @@ export const itemService = {
 };
 
 export const messageService = {
-  send:           (data)   => api.post('/messages', data),
-  getMyMessages:  ()       => api.get('/messages'),
-  getConversation:(userId) => api.get(`/messages/conversation/${userId}`),
-  getItemMessages:(itemId) => api.get(`/messages/item/${itemId}`),
-  markAsRead:     (id)     => api.patch(`/messages/${id}/read`),
-  getUnreadCount: ()       => api.get('/messages/unread-count'),
+  send:           (data)   => api.post('/api/messages', data),
+  getMyMessages:  ()       => api.get('/api/messages'),
+  getConversation:(userId) => api.get(`/api/messages/conversation/${userId}`),
+  getItemMessages:(itemId) => api.get(`/api/messages/item/${itemId}`),
+  markAsRead:     (id)     => api.patch(`/api/messages/${id}/read`),
+  getUnreadCount: ()       => api.get('/api/messages/unread-count'),
 };
