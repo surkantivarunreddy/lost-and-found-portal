@@ -31,11 +31,11 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
 
     @Query("SELECT i FROM Item i WHERE " +
     	       "(:keyword IS NULL OR :keyword = '' OR " +
-    	       "LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-    	       "LOWER(i.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+    	       "i.title LIKE CONCAT('%', :keyword, '%') OR " +
+    	       "i.description LIKE CONCAT('%', :keyword, '%')) " +
     	       "AND (:type IS NULL OR i.type = :type) " +
-    	       "AND (:category IS NULL OR LOWER(i.category) = LOWER(:category)) " +
-    	       "AND (:location IS NULL OR LOWER(i.location) LIKE LOWER(CONCAT('%', :location, '%'))) " +
+    	       "AND (:category IS NULL OR i.category = :category) " +
+    	       "AND (:location IS NULL OR i.location LIKE CONCAT('%', :location, '%')) " +
     	       "AND (:status IS NULL OR i.status = :status)")
     	Page<Item> searchItems(
     	    @Param("keyword") String keyword,
