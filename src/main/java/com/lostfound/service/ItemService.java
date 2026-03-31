@@ -91,11 +91,17 @@ public class ItemService {
 
     // ✅ FIXED SEARCH
     public Page<ItemDto.Response> searchItems(String keyword, ItemType type,
-                                             String category, String location,
-                                             Pageable pageable) {
-        return itemRepository.searchItems(keyword, type, category, location, pageable)
-                .map(this::mapToResponse);
-    }
+            String category, String location,
+            Pageable pageable) {
+		return itemRepository.searchItems(
+		keyword,
+		type,
+		category,
+		location,
+		ItemStatus.ACTIVE,   // ✅ PASS STATUS HERE
+		pageable
+		).map(this::mapToResponse);
+	}
 
     public ItemDto.Response getItemById(Long id) {
         return mapToResponse(findItemOrThrow(id));

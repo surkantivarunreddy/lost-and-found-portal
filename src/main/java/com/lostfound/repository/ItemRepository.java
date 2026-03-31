@@ -36,12 +36,13 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     	       "AND (:type IS NULL OR i.type = :type) " +
     	       "AND (:category IS NULL OR LOWER(i.category) = LOWER(:category)) " +
     	       "AND (:location IS NULL OR LOWER(i.location) LIKE LOWER(CONCAT('%', :location, '%'))) " +
-    	       "AND i.status = com.lostfound.entity.Item.ItemStatus.ACTIVE")
+    	       "AND (:status IS NULL OR i.status = :status)")
     	Page<Item> searchItems(
     	    @Param("keyword") String keyword,
     	    @Param("type") ItemType type,
     	    @Param("category") String category,
     	    @Param("location") String location,
+    	    @Param("status") ItemStatus status,   // ✅ NEW
     	    Pageable pageable
     	);
 
