@@ -42,24 +42,17 @@ public class ItemService {
         this.cloudinary = cloudinary;
     }
 
-    // ✅ CREATE ITEM WITH CLOUDINARY
     public ItemDto.Response createItem(ItemDto.CreateRequest request, MultipartFile image) {
         User currentUser = getCurrentUser();
-
         String imageUrl = null;
-
         if (image != null && !image.isEmpty()) {
             try {
-                Map uploadResult = cloudinary.uploader()
-                        .upload(image.getBytes(), ObjectUtils.emptyMap());
-
+                Map uploadResult = cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap());
                 imageUrl = uploadResult.get("secure_url").toString();
-
             } catch (IOException e) {
                 throw new RuntimeException("Cloudinary upload failed");
             }
         }
-
         Item item = Item.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
@@ -73,11 +66,9 @@ public class ItemService {
                 .reportedBy(currentUser)
                 .status(ItemStatus.ACTIVE)
                 .build();
-
         return mapToResponse(itemRepository.save(item));
     }
 
-    // ✅ GET ALL ITEMS
     public Page<ItemDto.Response> getAllItems(ItemType type, ItemStatus status, Pageable pageable) {
         if (type != null && status != null) {
             return itemRepository.findByTypeAndStatus(type, status, pageable).map(this::mapToResponse);
@@ -89,19 +80,25 @@ public class ItemService {
         return itemRepository.findByStatus(ItemStatus.ACTIVE, pageable).map(this::mapToResponse);
     }
 
-    // ✅ FIXED SEARCH
+    /**
+     * FIX: Pass enum values as .name() strings to match the native SQL
+     * query signature in ItemRepository (which expects String, not enum).
+     */
     public Page<ItemDto.Response> searchItems(String keyword, ItemType type,
-            String category, String location,
-            Pageable pageable) {
-		return itemRepository.searchItems(
-		keyword,
-		type,
-		category,
-		location,
-		ItemStatus.ACTIVE,   // ✅ PASS STATUS HERE
-		pageable
-		).map(this::mapToResponse);
-	}
+                                              String category, String location,
+                                              Pageable pageable) {
+        String typeStr   = (type != null) ? type.name() : null;
+        String statusStr = ItemStatus.ACTIVE.name(); // always search only ACTIVE items
+
+        return itemRepository.searchItems(
+                keyword,
+                typeStr,
+                category,
+                location,
+                statusStr,
+                pageable
+        ).map(this::mapToResponse);
+    }
 
     public ItemDto.Response getItemById(Long id) {
         return mapToResponse(findItemOrThrow(id));
@@ -117,21 +114,18 @@ public class ItemService {
     public ItemDto.Response updateItem(Long id, ItemDto.UpdateRequest request) {
         Item item = findItemOrThrow(id);
         User currentUser = getCurrentUser();
-
         if (!item.getReportedBy().getId().equals(currentUser.getId())) {
             throw new UnauthorizedException("You can only update your own items");
         }
-
-        if (request.getTitle() != null) item.setTitle(request.getTitle());
-        if (request.getDescription() != null) item.setDescription(request.getDescription());
-        if (request.getCategory() != null) item.setCategory(request.getCategory());
-        if (request.getLocation() != null) item.setLocation(request.getLocation());
+        if (request.getTitle() != null)         item.setTitle(request.getTitle());
+        if (request.getDescription() != null)   item.setDescription(request.getDescription());
+        if (request.getCategory() != null)      item.setCategory(request.getCategory());
+        if (request.getLocation() != null)      item.setLocation(request.getLocation());
         if (request.getDateLostFound() != null) item.setDateLostFound(request.getDateLostFound());
-        if (request.getImageUrl() != null) item.setImageUrl(request.getImageUrl());
-        if (request.getContactEmail() != null) item.setContactEmail(request.getContactEmail());
-        if (request.getContactPhone() != null) item.setContactPhone(request.getContactPhone());
-        if (request.getStatus() != null) item.setStatus(request.getStatus());
-
+        if (request.getImageUrl() != null)      item.setImageUrl(request.getImageUrl());
+        if (request.getContactEmail() != null)  item.setContactEmail(request.getContactEmail());
+        if (request.getContactPhone() != null)  item.setContactPhone(request.getContactPhone());
+        if (request.getStatus() != null)        item.setStatus(request.getStatus());
         return mapToResponse(itemRepository.save(item));
     }
 
@@ -139,16 +133,15 @@ public class ItemService {
     public void deleteItem(Long id) {
         Item item = findItemOrThrow(id);
         User currentUser = getCurrentUser();
-
         if (!item.getReportedBy().getId().equals(currentUser.getId())) {
             throw new UnauthorizedException("You can only delete your own items");
         }
-
         messageRepository.hardDeleteByItemId(id);
         itemRepository.hardDeleteById(id);
     }
 
-    // 🔧 HELPERS
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
     private Item findItemOrThrow(Long id) {
         return itemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found with id: " + id));

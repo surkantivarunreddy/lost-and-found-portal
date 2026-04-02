@@ -5,30 +5,39 @@ import ItemCard from '../components/ItemCard';
 import { useAuth } from '../context/AuthContext';
 import { itemService } from '../services/itemService';
 import './Dashboard.css';
- 
+
 const API = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
 const getHeaders = () => ({
   'Content-Type': 'application/json',
   Authorization: `Bearer ${localStorage.getItem('token')}`,
 });
- 
+
 const Dashboard = () => {
   const { user } = useAuth();
-  const [myItems,       setMyItems]       = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [activeTab,     setActiveTab]     = useState('items');
-  const [unread,        setUnread]        = useState(0);
- 
-  // Messaging
+  const [myItems, setMyItems]       = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [activeTab, setActiveTab]   = useState('items');
+  const [unread, setUnread]         = useState(0);
+
+  // ── Messaging state ──────────────────────────────────────────────────────
   const [conversations, setConversations] = useState([]);
-  const [activeConvo,   setActiveConvo]   = useState(null);
-  const [messages,      setMessages]      = useState([]);
-  const [msgLoading,    setMsgLoading]    = useState(false);
-  const [replyText,     setReplyText]     = useState('');
-  const [sending,       setSending]       = useState(false);
+  const [activeConvo, setActiveConvo]     = useState(null);
+  const [messages, setMessages]           = useState([]);
+  const [msgLoading, setMsgLoading]       = useState(false);
+  const [replyText, setReplyText]         = useState('');
+  const [sending, setSending]             = useState(false);
+
+  // NEW: media state
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview]   = useState(null);
+  const [locationText, setLocationText]   = useState('');
+  const [locLoading, setLocLoading]       = useState(false);
+
   const messagesEndRef = useRef(null);
- 
-  // Load items + unread count on mount
+  const fileInputRef   = useRef(null);
+
+  // ── Load items + unread on mount ─────────────────────────────────────────
   useEffect(() => {
     Promise.all([
       itemService.getMyItems(),
@@ -39,102 +48,142 @@ const Dashboard = () => {
     }).catch(console.error)
       .finally(() => setLoading(false));
   }, []);
- 
-  // Load conversations when Messages tab is opened
+
+  // ── Load conversations when Messages tab opens ───────────────────────────
   useEffect(() => {
     if (activeTab === 'messages') loadConversations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
- 
+
   const loadConversations = async () => {
     try {
-      const res = await axios.get(`${API}/api/messages`, { headers: getHeaders() });
+      const res  = await axios.get(`${API}/api/messages`, { headers: getHeaders() });
       const msgs = res.data || [];
       const convMap = {};
- 
       msgs.forEach(msg => {
         const isMine    = msg.senderId === user.id;
         const otherId   = isMine ? msg.receiverId : msg.senderId;
         const otherName = isMine ? msg.receiverName : msg.senderName;
- 
         if (!convMap[otherId]) {
           convMap[otherId] = { userId: otherId, name: otherName, lastMsg: '', lastTime: null, unread: 0 };
         }
         if (!convMap[otherId].lastTime || new Date(msg.sentAt) > new Date(convMap[otherId].lastTime)) {
-          convMap[otherId].lastMsg  = msg.content;
+          convMap[otherId].lastMsg  = msg.imageUrl ? '📷 Image' : (msg.locationText ? '📍 Location' : msg.content);
           convMap[otherId].lastTime = msg.sentAt;
         }
         if (!isMine && !msg.isRead) convMap[otherId].unread++;
       });
- 
-      const list = Object.values(convMap).sort(
-        (a, b) => new Date(b.lastTime) - new Date(a.lastTime)
-      );
+      const list = Object.values(convMap).sort((a, b) => new Date(b.lastTime) - new Date(a.lastTime));
       setConversations(list);
       if (list.length > 0 && !activeConvo) openConversation(list[0]);
     } catch (e) { console.error(e); }
   };
- 
+
   const openConversation = async (convo) => {
     setActiveConvo(convo);
     setMsgLoading(true);
     setReplyText('');
+    clearMedia();
     try {
-      const res = await axios.get(
-        `${API}/api/messages/conversation/${convo.userId}`,
-        { headers: getHeaders() }
-      );
+      const res  = await axios.get(`${API}/api/messages/conversation/${convo.userId}`, { headers: getHeaders() });
       const msgs = res.data || [];
       setMessages(msgs);
- 
       // Mark unread as read
       const unreadMsgs = msgs.filter(m => m.receiverId === user.id && !m.isRead);
       await Promise.all(
-        unreadMsgs.map(m =>
-          axios.patch(`${API}/api/messages/${m.id}/read`, {}, { headers: getHeaders() })
-        )
+        unreadMsgs.map(m => axios.patch(`${API}/api/messages/${m.id}/read`, {}, { headers: getHeaders() }))
       );
       if (unreadMsgs.length > 0) {
         setUnread(prev => Math.max(0, prev - unreadMsgs.length));
-        setConversations(prev =>
-          prev.map(c => c.userId === convo.userId ? { ...c, unread: 0 } : c)
-        );
+        setConversations(prev => prev.map(c => c.userId === convo.userId ? { ...c, unread: 0 } : c));
       }
     } catch (e) { console.error(e); }
     finally { setMsgLoading(false); }
   };
- 
-  // Auto-scroll to latest message
+
+  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
- 
-  const handleSendReply = async (e) => {
-    e.preventDefault();
-    if (!replyText.trim() || !activeConvo) return;
-    setSending(true);
-    const text = replyText.trim();
-    setReplyText('');
-    try {
-      const res = await axios.post(`${API}/api/messages`,
-        { receiverId: activeConvo.userId, content: text },
-        { headers: getHeaders() }
-      );
-      setMessages(prev => [...prev, res.data]);
-      setConversations(prev =>
-        prev.map(c =>
-          c.userId === activeConvo.userId
-            ? { ...c, lastMsg: text, lastTime: new Date().toISOString() }
-            : c
-        )
-      );
-    } catch (e) {
-      alert('Failed to send message.');
-      setReplyText(text);
-    } finally {
-      setSending(false);
-    }
+
+  // ── Media helpers ────────────────────────────────────────────────────────
+  const clearMedia = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    setLocationText('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
- 
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSelectedImage(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleShareLocation = () => {
+    if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
+    setLocLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude, longitude } = pos.coords;
+        setLocationText(`${latitude.toFixed(6)},${longitude.toFixed(6)}`);
+        setLocLoading(false);
+      },
+      () => { alert('Could not get location. Please allow location access and try again.'); setLocLoading(false); }
+    );
+  };
+
+  // ── Send message ─────────────────────────────────────────────────────────
+  const handleSendReply = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const hasText     = replyText.trim().length > 0;
+    const hasImage    = !!selectedImage;
+    const hasLocation = !!locationText;
+    if (!hasText && !hasImage && !hasLocation) return;
+    if (!activeConvo) return;
+
+    setSending(true);
+    const text    = replyText.trim();
+    const locSnap = locationText;
+    const imgFile = selectedImage;
+    setReplyText('');
+    clearMedia();
+
+    try {
+      let res;
+      if (hasImage) {
+        // Multipart upload for image (+ optional text/location)
+        const fd = new FormData();
+        fd.append('receiverId', activeConvo.userId);
+        if (text)     fd.append('content', text);
+        if (locSnap)  fd.append('locationText', locSnap);
+        fd.append('image', imgFile);
+        res = await axios.post(`${API}/api/messages/with-media`, fd, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+      } else {
+        // Plain JSON for text / location-only
+        res = await axios.post(`${API}/api/messages`,
+          { receiverId: activeConvo.userId, content: text || null, locationText: locSnap || null },
+          { headers: getHeaders() }
+        );
+      }
+
+      setMessages(prev => [...prev, res.data]);
+      const preview = hasImage ? '📷 Image' : (hasLocation ? '📍 Location' : text);
+      setConversations(prev => prev.map(c =>
+        c.userId === activeConvo.userId
+          ? { ...c, lastMsg: preview, lastTime: new Date().toISOString() }
+          : c
+      ));
+    } catch (e) {
+      alert('Failed to send message. Please try again.');
+      setReplyText(text);
+    } finally { setSending(false); }
+  };
+
+  // ── Item actions ─────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this item?')) return;
     try {
@@ -142,33 +191,35 @@ const Dashboard = () => {
       setMyItems(prev => prev.filter(i => i.id !== id));
     } catch (e) { alert('Failed to delete item.'); }
   };
- 
+
   const handleResolve = async (id) => {
     if (!window.confirm('Mark this item as Resolved (reunited with owner)?')) return;
     try {
       await itemService.update(id, { status: 'RESOLVED' });
-      setMyItems(prev => prev.map(i =>
-        i.id === id ? { ...i, status: 'RESOLVED' } : i
-      ));
+      setMyItems(prev => prev.map(i => i.id === id ? { ...i, status: 'RESOLVED' } : i));
     } catch (e) { alert('Failed to update item status.'); }
   };
- 
+
+  // ── Formatting ───────────────────────────────────────────────────────────
   const formatTime = (t) => {
     if (!t) return '';
-    const d = new Date(t);
+    const d       = new Date(t);
     const isToday = d.toDateString() === new Date().toDateString();
     return isToday
       ? d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
       : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   };
- 
+
   const lostItems     = myItems.filter(i => i.type === 'LOST');
   const foundItems    = myItems.filter(i => i.type === 'FOUND');
   const resolvedItems = myItems.filter(i => i.status === 'RESOLVED');
- 
+
+  const canSend = !sending && (replyText.trim() || selectedImage || locationText);
+
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="dashboard container">
- 
+
       {/* Header */}
       <div className="dash-header">
         <div>
@@ -180,7 +231,7 @@ const Dashboard = () => {
           <Link to="/report-found" className="btn btn-primary">+ Report Found</Link>
         </div>
       </div>
- 
+
       {/* Stats */}
       <div className="dash-stats">
         <div className="dash-stat"><strong>{myItems.length}</strong><span>Total Reports</span></div>
@@ -191,22 +242,20 @@ const Dashboard = () => {
         </div>
         <div className="dash-stat"><strong>{unread}</strong><span>Unread Messages</span></div>
       </div>
- 
+
       {/* Tabs */}
       <div className="dash-tabs">
-        <button className={activeTab === 'items' ? 'active' : ''}
-                onClick={() => setActiveTab('items')}>
+        <button className={activeTab === 'items' ? 'active' : ''} onClick={() => setActiveTab('items')}>
           My Items ({myItems.length})
         </button>
-        <button className={activeTab === 'messages' ? 'active' : ''}
-                onClick={() => setActiveTab('messages')}>
+        <button className={activeTab === 'messages' ? 'active' : ''} onClick={() => setActiveTab('messages')}>
           Messages {unread > 0 && <span className="badge-dot">{unread}</span>}
         </button>
       </div>
- 
-      {/* ── Items Tab ───────────────────────────────── */}
+
+      {/* ── Items Tab ────────────────────────────────────────────── */}
       {activeTab === 'items' && (
-        loading ? <p className="loading-text">Loading…</p> :
+        loading ? <p className="loading-text">Loading...</p> :
         myItems.length === 0 ? (
           <div className="dash-empty">
             <p>You haven't reported any items yet.</p>
@@ -216,17 +265,17 @@ const Dashboard = () => {
           <div className="grid-3">
             {myItems.map(item => (
               <ItemCard key={item.id} item={item}
-                        onDelete={handleDelete}
-                        onResolve={item.status !== 'RESOLVED' ? handleResolve : null} />
+                onDelete={handleDelete}
+                onResolve={item.status !== 'RESOLVED' ? handleResolve : null} />
             ))}
           </div>
         )
       )}
- 
-      {/* ── Messages Tab ────────────────────────────── */}
+
+      {/* ── Messages Tab ─────────────────────────────────────────── */}
       {activeTab === 'messages' && (
         <div className="messages-layout">
- 
+
           {/* Sidebar: conversation list */}
           <div className="convo-list">
             <div className="convo-list-header">💬 Conversations</div>
@@ -238,20 +287,16 @@ const Dashboard = () => {
             ) : (
               conversations.map(convo => (
                 <div key={convo.userId}
-                     className={`convo-item ${activeConvo?.userId === convo.userId ? 'convo-active' : ''}`}
-                     onClick={() => openConversation(convo)}>
-                  <div className="convo-avatar">
-                    {convo.name.charAt(0).toUpperCase()}
-                  </div>
+                  className={`convo-item ${activeConvo?.userId === convo.userId ? 'convo-active' : ''}`}
+                  onClick={() => openConversation(convo)}>
+                  <div className="convo-avatar">{convo.name.charAt(0).toUpperCase()}</div>
                   <div className="convo-info">
                     <div className="convo-name-row">
                       <span className="convo-name">{convo.name}</span>
-                      {convo.unread > 0 && (
-                        <span className="convo-unread-badge">{convo.unread}</span>
-                      )}
+                      {convo.unread > 0 && <span className="convo-unread-badge">{convo.unread}</span>}
                     </div>
                     <div className="convo-preview">
-                      {convo.lastMsg?.substring(0, 40)}{convo.lastMsg?.length > 40 ? '…' : ''}
+                      {convo.lastMsg?.substring(0, 40)}{convo.lastMsg?.length > 40 ? '...' : ''}
                     </div>
                   </div>
                   <div className="convo-time">{formatTime(convo.lastTime)}</div>
@@ -259,7 +304,7 @@ const Dashboard = () => {
               ))
             )}
           </div>
- 
+
           {/* Chat window */}
           <div className="chat-window">
             {!activeConvo ? (
@@ -279,14 +324,14 @@ const Dashboard = () => {
                     <div className="chat-header-sub">Lost &amp; Found Portal</div>
                   </div>
                 </div>
- 
-                {/* Messages */}
+
+                {/* Messages list */}
                 <div className="chat-messages">
                   {msgLoading ? (
-                    <p className="loading-text">Loading messages…</p>
+                    <p className="loading-text">Loading messages...</p>
                   ) : messages.length === 0 ? (
                     <div className="chat-no-msgs">
-                      <span>👋</span>
+                      <span>💬</span>
                       <p>No messages yet. Start the conversation!</p>
                     </div>
                   ) : (
@@ -294,9 +339,7 @@ const Dashboard = () => {
                       {messages.map((msg, i) => {
                         const isMine = msg.senderId === user.id;
                         const showDateDivider = i === 0 ||
-                          new Date(msg.sentAt).toDateString() !==
-                          new Date(messages[i - 1].sentAt).toDateString();
- 
+                          new Date(msg.sentAt).toDateString() !== new Date(messages[i - 1].sentAt).toDateString();
                         return (
                           <React.Fragment key={msg.id}>
                             {showDateDivider && (
@@ -316,7 +359,25 @@ const Dashboard = () => {
                                 {msg.itemTitle && (
                                   <div className="bubble-item-ref">📦 re: {msg.itemTitle}</div>
                                 )}
-                                <p>{msg.content}</p>
+                                {/* Text content */}
+                                {msg.content && <p>{msg.content}</p>}
+                                {/* Image attachment */}
+                                {msg.imageUrl && (
+                                  <a href={msg.imageUrl} target="_blank" rel="noreferrer">
+                                    <img src={msg.imageUrl} alt="attachment" className="bubble-image" />
+                                  </a>
+                                )}
+                                {/* Location */}
+                                {msg.locationText && (
+                                  <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${msg.locationText}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="bubble-location"
+                                  >
+                                    📍 View Location on Map
+                                  </a>
+                                )}
                                 <div className="bubble-meta">
                                   <span className="bubble-time">
                                     {new Date(msg.sentAt).toLocaleTimeString('en-IN', {
@@ -338,38 +399,108 @@ const Dashboard = () => {
                     </>
                   )}
                 </div>
- 
-                {/* Reply input */}
-                <form className="chat-input-area" onSubmit={handleSendReply}>
-                  <textarea
-                    className="chat-textarea"
-                    placeholder={`Message ${activeConvo.name}… (Enter to send)`}
-                    value={replyText}
-                    rows={2}
-                    onChange={e => setReplyText(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendReply(e);
-                      }
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    className="chat-send-btn"
-                    disabled={sending || !replyText.trim()}>
-                    {sending ? '⏳' : '➤'}
-                  </button>
-                </form>
-                <p className="chat-hint">Enter to send · Shift+Enter for new line</p>
+
+                {/* ── Professional chat input ───────────────────── */}
+                <div className="chat-input-area">
+
+                  {/* Previews row */}
+                  {(imagePreview || locationText) && (
+                    <div className="chat-previews">
+                      {imagePreview && (
+                        <div className="preview-chip preview-image">
+                          <img src={imagePreview} alt="preview" />
+                          <button className="preview-remove"
+                            onClick={() => { setSelectedImage(null); setImagePreview(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>
+                            ✕
+                          </button>
+                        </div>
+                      )}
+                      {locationText && (
+                        <div className="preview-chip preview-location">
+                          <span>📍 Location ready to send</span>
+                          <button className="preview-remove" onClick={() => setLocationText('')}>✕</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Input row */}
+                  <div className="chat-input-row">
+
+                    {/* Hidden file input */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleImageSelect}
+                    />
+
+                    {/* Action buttons */}
+                    <div className="chat-action-btns">
+                      <button
+                        type="button"
+                        className="chat-icon-btn"
+                        title="Attach Image"
+                        onClick={() => fileInputRef.current.click()}
+                      >
+                        📷
+                      </button>
+                      <button
+                        type="button"
+                        className={`chat-icon-btn ${locLoading ? 'loading' : ''}`}
+                        title="Share Location"
+                        onClick={handleShareLocation}
+                        disabled={locLoading || !!locationText}
+                      >
+                        {locLoading ? '⏳' : '📍'}
+                      </button>
+                    </div>
+
+                    {/* Text input */}
+                    <textarea
+                      className="chat-textarea"
+                      placeholder={`Message ${activeConvo.name}…`}
+                      value={replyText}
+                      rows={1}
+                      onChange={e => setReplyText(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendReply(e);
+                        }
+                      }}
+                    />
+
+                    {/* Send button */}
+                    <button
+                      type="button"
+                      className="chat-send-btn"
+                      onClick={handleSendReply}
+                      disabled={!canSend}
+                      title="Send"
+                    >
+                      {sending ? (
+                        <span className="send-spinner" />
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="chat-hint">
+                    Press <kbd>Enter</kbd> to send · <kbd>Shift+Enter</kbd> for new line
+                  </div>
+                </div>
               </>
             )}
           </div>
- 
         </div>
       )}
     </div>
   );
 };
- 
+
 export default Dashboard;
