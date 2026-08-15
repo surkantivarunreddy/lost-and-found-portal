@@ -1,0 +1,265 @@
+/* ── Hero ─────────────────────────────────────────────── */
+.hero {
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%);
+  padding: 5rem 1rem 4rem;
+  text-align: center;
+  color: white;
+}
+ 
+.hero-content {
+  max-width: 700px;
+  margin: 0 auto;
+}
+ 
+.hero-content h1 {
+  font-size: 2.8rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 1.2rem;
+  color: white;
+}
+ 
+.hero-content p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin-bottom: 2rem;
+  color: white;
+}
+ 
+.hero-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+ 
+/* Hero buttons — explicit colors so text is always visible */
+.hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 1.4rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+ 
+.hero-btn-primary {
+  background: white;
+  color: #1e40af !important;
+  border-color: white;
+}
+.hero-btn-primary:hover {
+  background: #eff6ff;
+  color: #1e40af !important;
+}
+ 
+.hero-btn-secondary {
+  background: #16a34a;
+  color: white !important;
+  border-color: #16a34a;
+}
+.hero-btn-secondary:hover {
+  background: #15803d;
+  color: white !important;
+}
+ 
+.hero-btn-white {
+  background: rgba(255,255,255,0.15);
+  color: white !important;
+  border-color: rgba(255,255,255,0.6);
+  backdrop-filter: blur(4px);
+}
+.hero-btn-white:hover {
+  background: rgba(255,255,255,0.25);
+  color: white !important;
+}
+ 
+/* ── Stats ────────────────────────────────────────────── */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  padding: 2.5rem 1rem;
+}
+ 
+.stat-card {
+  background: white;
+  border-radius: 14px;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+ 
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+}
+ 
+.stat-card-highlight {
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  border: 1.5px solid #6ee7b7;
+}
+ 
+.stat-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+ 
+.stat-number {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1e40af;
+  line-height: 1.1;
+}
+ 
+.stat-card-highlight .stat-number {
+  color: #065f46;
+}
+ 
+.stat-label {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+ 
+/* ── How It Works ─────────────────────────────────────── */
+.how-it-works {
+  padding: 3rem 1rem;
+}
+ 
+.section-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+ 
+.steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+ 
+.step {
+  background: white;
+  border-radius: 14px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  flex: 1;
+  min-width: 180px;
+  max-width: 240px;
+}
+ 
+.step-num {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.75rem;
+}
+ 
+.step h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.4rem;
+}
+ 
+.step p {
+  font-size: 0.87rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+ 
+.step-arrow {
+  font-size: 1.8rem;
+  color: #94a3b8;
+  font-weight: 300;
+}
+ 
+/* ── Recent Reports ───────────────────────────────────── */
+.recent {
+  padding: 2rem 1rem 4rem;
+}
+ 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+ 
+.section-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+ 
+.loading-text {
+  text-align: center;
+  color: #64748b;
+  padding: 2rem;
+}
+ 
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+ 
+.empty-state span {
+  font-size: 3rem;
+}
+ 
+/* ── Responsive ───────────────────────────────────────── */
+@media (max-width: 900px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+ 
+@media (max-width: 600px) {
+  .hero-content h1 {
+    font-size: 1.9rem;
+  }
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 1.5rem 1rem;
+  }
+  .step-arrow {
+    display: none;
+  }
+  .steps {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .step {
+    max-width: 100%;
+  }
+}
